@@ -1,0 +1,165 @@
+﻿#include "mbed.h"
+#include "FXOS8700Q.h"
+//defines
+#define DELAY 20    
+
+
+//I2C lines for FXOS8700Q accelerometer
+FXOS8700Q_acc acc( PTE25, PTE24, FXOS8700CQ_SLAVE_ADDR1);
+
+
+Serial pc(PTC15, PTC14);
+//Serial pc(USBTX, USBRX);
+
+
+DigitalIn sw2(SW2);
+DigitalIn sw3(SW3);
+
+
+void getAccValues();
+void calculateTilt(float*,float*);
+void sendDefault(int);
+void sendJump(int);
+void sendLeft(int);
+void sendFastLeft(int);
+void sendRight(int);
+void sendFastRight(int);
+
+
+float accX, accY, accZ;
+bool sendingdata = false;
+
+
+int main()
+{
+        //sensor values
+        float pitch, roll;
+    
+        //ADJUST BAUD RATE FOR UNITY
+        pc.baud(9600);
+    
+        //enable the accelerometer
+        acc.enable();          
+         
+            while (true)
+            {
+                getAccValues();
+                calculateTilt(&pitch, &roll);
+                //pc.printf("Roll is %6.3f\r\n",roll);
+                //wait_ms(500);
+                
+                //IF MOVING RIGHT
+                if(roll > 0.6)
+                {
+                    if(roll > 0.8)
+                    {
+                        sendFastRight(DELAY);
+                        sendingdata = true;
+                    }
+                    else
+                    {
+                        sendRight(DELAY);
+                        sendingdata = true;
+                    }
+                }
+                
+                //IF MOVING LEFT
+                if(roll < -0.6)
+                {
+                    if(roll < -0.8)
+                    {
+                        sendFastLeft(DELAY);
+                        sendingdata = true;
+                    }
+                    else
+                    {
+                        sendLeft(DELAY);
+                        sendingdata = true;  
+                    }
+                }
+                
+                
+                //IF JUMPING
+                if(sw2 == 0)
+                {
+                    sendJump(DELAY);
+                    sendingdata = true;
+                }
+                
+                //only send default value if we have no valid data to send
+                if(sendingdata == false)
+                {
+                    sendDefault(20);   
+                }
+                
+                //done sending data
+                sendingdata = false;
+                
+                
+                //remember multiple if statements can happen each loop and contribute thier own delay so in the worse case
+                //we delay number of actions * DELAY otherwise we send default case and delay for default time
+                //there is also a slight delay in calculating pitch/roll and getting accel values
+                
+            }//end while
+}//end main
+
+
+void getAccValues()
+{
+        //read x y z from the accelerometer
+        acc.getX(&accX);           
+        acc.getY(&accY);
+        acc.getZ(&accZ);
+}
+
+
+void calculateTilt(float* pitch, float* roll)
+{
+        //calculate pitch and roll
+        *pitch = atan2(accY,(sqrt(pow(accX, 2) + pow(accZ, 2 ))));
+        *roll = atan2((-1 * accX),accZ);    
+}
+
+
+void sendDefault(int delay)
+{
+        //DEFAULT MESSAGE SENT
+        pc.printf("%d",0);
+        wait_ms(delay);
+}
+
+
+void sendJump(int delay)
+{
+        //DEFAULT MESSAGE SENT
+        pc.printf("%d", 1);
+        wait_ms(delay);
+}    
+
+
+void sendLeft(int delay)
+{
+        //DEFAULT MESSAGE SENT
+        pc.printf("%d",3);
+        wait_ms(delay);
+}
+
+
+void sendRight(int delay)
+{
+        //DEFAULT MESSAGE SENT
+        pc.printf("%d",4);
+        wait_ms(delay);
+}
+void sendFastRight(int delay)
+{
+        //DEFAULT MESSAGE SENT
+        pc.printf("%d",5);
+        wait_ms(delay);
+}
+void sendFastLeft(int delay)
+{
+        //DEFAULT MESSAGE SENT
+        pc.printf("%d",6);
+        wait_ms(delay);
+}
